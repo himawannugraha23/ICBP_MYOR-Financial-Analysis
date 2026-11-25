@@ -1,0 +1,589 @@
+SELECT
+    COUNT(*) AS total_rows
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`;
+
+SELECT
+    company,
+    fiscal_year,
+    net_sales,
+    gross_profit,
+    profit_for_year
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+ORDER BY company, fiscal_year;
+
+#TOTAL REVENUR
+SELECT
+    company,
+    SUM(net_sales) AS total_revenue
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+GROUP BY
+    company
+ORDER BY
+    total_revenue DESC;
+
+#
+
+SELECT
+    company,
+    fiscal_year,
+    net_sales
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+ORDER BY
+    fiscal_year,
+    company;
+
+#3
+
+
+SELECT
+    company,
+    fiscal_year,
+    net_sales,
+
+    LAG(net_sales) OVER (
+        PARTITION BY company
+        ORDER BY fiscal_year
+    ) AS previous_sales,
+
+    ROUND(
+        SAFE_DIVIDE(
+            net_sales - LAG(net_sales) OVER (
+                PARTITION BY company
+                ORDER BY fiscal_year
+            ),
+            LAG(net_sales) OVER (
+                PARTITION BY company
+                ORDER BY fiscal_year
+            )
+        ) * 100,
+        2
+    ) AS revenue_growth_pct
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY
+    company,
+    fiscal_year;
+
+
+#MODUL 2
+
+
+-- =====================================================
+-- PROJECT: ICBP VS MYOR FINANCIAL ANALYSIS
+-- MODULE 02: PROFITABILITY ANALYSIS
+-- PERIOD: 2020-2025
+-- =====================================================
+
+-- QUERY 1: PROFITABILITY OVERVIEW
+
+SELECT
+    company,
+    SUM(net_sales) AS total_revenue,
+    SUM(gross_profit) AS total_gross_profit,
+    SUM(operating_profit) AS total_operating_profit,
+    SUM(profit_for_year) AS total_net_income
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+GROUP BY company
+ORDER BY total_net_income DESC;
+
+
+-- QUERY 2: ANNUAL PROFITABILITY
+
+SELECT
+    company,
+    fiscal_year,
+    net_sales,
+    gross_profit,
+    operating_profit,
+    profit_for_year,
+
+    ROUND(
+        SAFE_DIVIDE(gross_profit, net_sales) * 100, 2
+    ) AS gross_profit_margin_pct,
+
+    ROUND(
+        SAFE_DIVIDE(operating_profit, net_sales) * 100, 2
+    ) AS operating_profit_margin_pct,
+
+    ROUND(
+        SAFE_DIVIDE(profit_for_year, net_sales) * 100, 2
+    ) AS net_profit_margin_pct
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 3: YEAR-OVER-YEAR NET PROFIT GROWTH
+
+WITH profit_data AS (
+    SELECT
+        company,
+        fiscal_year,
+        profit_for_year,
+
+        LAG(profit_for_year) OVER (
+            PARTITION BY company
+            ORDER BY fiscal_year
+        ) AS previous_profit
+
+    FROM
+        `financial-analyst-515705.financial_analyst.raw_financials_clean`
+)
+
+SELECT
+    company,
+    fiscal_year,
+    profit_for_year,
+    previous_profit,
+
+    ROUND(
+        SAFE_DIVIDE(
+            profit_for_year - previous_profit,
+            previous_profit
+        ) * 100, 2
+    ) AS net_profit_growth_pct
+
+FROM profit_data
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 4: AVERAGE ANNUAL PROFITABILITY
+
+SELECT
+    company,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(gross_profit, net_sales) * 100
+    ), 2) AS avg_gross_profit_margin,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(operating_profit, net_sales) * 100
+    ), 2) AS avg_operating_profit_margin,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(profit_for_year, net_sales) * 100
+    ), 2) AS avg_net_profit_margin
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+GROUP BY company
+ORDER BY avg_net_profit_margin DESC;
+
+
+#Modul 3: Liquidity analysis
+
+
+-- =====================================================
+-- MODULE 03: LIQUIDITY ANALYSIS
+-- =====================================================
+
+-- QUERY 1: CURRENT RATIO
+
+SELECT
+    company,
+    fiscal_year,
+    current_assets,
+    current_liabilities,
+
+    ROUND(
+        SAFE_DIVIDE(current_assets, current_liabilities),
+        2
+    ) AS current_ratio
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 2: WORKING CAPITAL
+
+SELECT
+    company,
+    fiscal_year,
+    current_assets,
+    current_liabilities,
+
+    current_assets - current_liabilities
+        AS working_capital
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 3: CASH RATIO
+
+SELECT
+    company,
+    fiscal_year,
+    cash_equivalents,
+    current_liabilities,
+
+    ROUND(
+        SAFE_DIVIDE(cash_equivalents, current_liabilities),
+        2
+    ) AS cash_ratio
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 4: LIQUIDITY BENCHMARKING
+
+SELECT
+    company,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(current_assets, current_liabilities)
+    ), 2) AS avg_current_ratio,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(cash_equivalents, current_liabilities)
+    ), 2) AS avg_cash_ratio,
+
+    ROUND(AVG(
+        current_assets - current_liabilities
+    ), 2) AS avg_working_capital
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+GROUP BY company;
+
+
+-- =====================================================
+-- MODULE 04: SOLVENCY ANALYSIS
+-- =====================================================
+
+-- QUERY 1: DEBT TO EQUITY RATIO
+
+SELECT
+    company,
+    fiscal_year,
+
+    ROUND(
+        SAFE_DIVIDE(total_liabilities, total_equity),
+        2
+    ) AS debt_to_equity_ratio
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 2: DEBT TO ASSET RATIO
+
+SELECT
+    company,
+    fiscal_year,
+
+    ROUND(
+        SAFE_DIVIDE(total_liabilities, total_assets) * 100,
+        2
+    ) AS debt_to_asset_pct
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 3: EQUITY RATIO
+
+SELECT
+    company,
+    fiscal_year,
+
+    ROUND(
+        SAFE_DIVIDE(total_equity, total_assets) * 100,
+        2
+    ) AS equity_ratio_pct
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 4: SOLVENCY BENCHMARKING
+
+SELECT
+    company,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(total_liabilities, total_equity)
+    ), 2) AS avg_debt_to_equity,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(total_liabilities, total_assets) * 100
+    ), 2) AS avg_debt_to_asset_pct,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(total_equity, total_assets) * 100
+    ), 2) AS avg_equity_ratio_pct
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+GROUP BY company;
+
+
+-- =====================================================
+-- MODULE 05: CASH FLOW ANALYSIS
+-- =====================================================
+
+-- QUERY 1: OPERATING CASH FLOW TREND
+
+SELECT
+    company,
+    fiscal_year,
+    cfo
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 2: FREE CASH FLOW
+
+SELECT
+    company,
+    fiscal_year,
+    cfo,
+    capex_ppe,
+
+    cfo - capex_ppe AS free_cash_flow
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 3: CFO TO NET INCOME
+
+SELECT
+    company,
+    fiscal_year,
+    cfo,
+    profit_for_year,
+
+    ROUND(
+        SAFE_DIVIDE(cfo, profit_for_year),
+        2
+    ) AS cfo_to_net_income
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+ORDER BY company, fiscal_year;
+
+
+-- QUERY 4: CASH FLOW BENCHMARKING
+
+SELECT
+    company,
+
+    SUM(cfo) AS total_operating_cash_flow,
+    SUM(capex_ppe) AS total_capex,
+    SUM(cfo - capex_ppe) AS total_free_cash_flow,
+
+    ROUND(AVG(cfo), 2) AS avg_annual_cfo
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+GROUP BY company;
+
+
+-- =====================================================
+-- MODULE 06: FINANCIAL BENCHMARKING
+-- =====================================================
+
+SELECT
+    company,
+
+    ROUND(
+        SAFE_DIVIDE(SUM(gross_profit), SUM(net_sales)) * 100,
+        2
+    ) AS gross_profit_margin_pct,
+
+    ROUND(
+        SAFE_DIVIDE(SUM(operating_profit), SUM(net_sales)) * 100,
+        2
+    ) AS operating_profit_margin_pct,
+
+    ROUND(
+        SAFE_DIVIDE(SUM(profit_for_year), SUM(net_sales)) * 100,
+        2
+    ) AS net_profit_margin_pct,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(current_assets, current_liabilities)
+    ), 2) AS avg_current_ratio,
+
+    ROUND(AVG(
+        SAFE_DIVIDE(total_liabilities, total_equity)
+    ), 2) AS avg_debt_to_equity,
+
+    SUM(cfo) AS total_cfo,
+
+    SUM(cfo - capex_ppe) AS total_free_cash_flow
+
+FROM
+    `financial-analyst-515705.financial_analyst.raw_financials_clean`
+
+GROUP BY company;
+
+#============REVENUE RESULT===================
+
+WITH revenue AS (
+    SELECT
+        company,
+        fiscal_year,
+        net_sales,
+        LAG(net_sales) OVER (
+            PARTITION BY company ORDER BY fiscal_year
+        ) AS previous_sales
+    FROM `financial-analyst-515705.financial_analyst.raw_financials_clean`
+)
+SELECT
+    company,
+    fiscal_year,
+    net_sales,
+    previous_sales,
+    ROUND(
+        SAFE_DIVIDE(net_sales - previous_sales, previous_sales) * 100,
+        2
+    ) AS revenue_growth_pct
+FROM revenue
+ORDER BY company, fiscal_year;
+
+
+SELECT
+    company,
+    fiscal_year,
+    net_sales,
+    gross_profit,
+    operating_profit,
+    profit_for_year,
+
+    ROUND(SAFE_DIVIDE(gross_profit, net_sales) * 100, 2)
+        AS gross_profit_margin_pct,
+
+    ROUND(SAFE_DIVIDE(operating_profit, net_sales) * 100, 2)
+        AS operating_profit_margin_pct,
+
+    ROUND(SAFE_DIVIDE(profit_for_year, net_sales) * 100, 2)
+        AS net_profit_margin_pct
+
+FROM `financial-analyst-515705.financial_analyst.raw_financials_clean`
+ORDER BY company, fiscal_year;
+
+
+SELECT
+    company,
+    fiscal_year,
+    current_assets,
+    current_liabilities,
+    cash_equivalents,
+
+    ROUND(SAFE_DIVIDE(current_assets, current_liabilities), 2)
+        AS current_ratio,
+
+    current_assets - current_liabilities
+        AS working_capital,
+
+    ROUND(SAFE_DIVIDE(cash_equivalents, current_liabilities), 2)
+        AS cash_ratio
+
+FROM `financial-analyst-515705.financial_analyst.raw_financials_clean`
+ORDER BY company, fiscal_year;
+
+
+SELECT
+    company,
+    fiscal_year,
+    total_assets,
+    total_liabilities,
+    total_equity,
+
+    ROUND(SAFE_DIVIDE(total_liabilities, total_equity), 2)
+        AS debt_to_equity_ratio,
+
+    ROUND(SAFE_DIVIDE(total_liabilities, total_assets) * 100, 2)
+        AS debt_to_asset_pct,
+
+    ROUND(SAFE_DIVIDE(total_equity, total_assets) * 100, 2)
+        AS equity_ratio_pct
+
+FROM `financial-analyst-515705.financial_analyst.raw_financials_clean`
+ORDER BY company, fiscal_year;
+
+
+SELECT
+    company,
+    fiscal_year,
+    cfo,
+    capex_ppe,
+    profit_for_year,
+
+    cfo - capex_ppe AS free_cash_flow,
+
+    ROUND(SAFE_DIVIDE(cfo, profit_for_year), 2)
+        AS cfo_to_net_income
+
+FROM `financial-analyst-515705.financial_analyst.raw_financials_clean`
+ORDER BY company, fiscal_year;
+
+
+SELECT
+    company,
+
+    SUM(net_sales) AS total_revenue,
+    SUM(gross_profit) AS total_gross_profit,
+    SUM(operating_profit) AS total_operating_profit,
+    SUM(profit_for_year) AS total_net_income,
+
+    ROUND(
+        SAFE_DIVIDE(SUM(gross_profit), SUM(net_sales)) * 100, 2
+    ) AS gross_profit_margin_pct,
+
+    ROUND(
+        SAFE_DIVIDE(SUM(operating_profit), SUM(net_sales)) * 100, 2
+    ) AS operating_profit_margin_pct,
+
+    ROUND(
+        SAFE_DIVIDE(SUM(profit_for_year), SUM(net_sales)) * 100, 2
+    ) AS net_profit_margin_pct,
+
+    ROUND(AVG(SAFE_DIVIDE(current_assets, current_liabilities)), 2)
+        AS avg_current_ratio,
+
+    ROUND(AVG(SAFE_DIVIDE(total_liabilities, total_equity)), 2)
+        AS avg_debt_to_equity,
+
+    SUM(cfo) AS total_cfo,
+    SUM(cfo - capex_ppe) AS total_free_cash_flow
+
+FROM `financial-analyst-515705.financial_analyst.raw_financials_clean`
+GROUP BY company
+ORDER BY company;
